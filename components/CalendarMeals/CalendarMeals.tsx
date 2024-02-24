@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
 
+import { AntDesign } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { Dimensions, Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { CalendarList } from 'react-native-calendars';
 
@@ -43,8 +44,8 @@ const CalendarMeals = (props: Props) => {
 		<View style={styles.container}>
 			<Modal visible={props.isVisible} animationType="slide">
 				<SafeAreaView style={styles.centeredView}>
-					<Pressable onPress={props.toggleModalCalendar}>
-						<Text>Close</Text>
+					<Pressable onPress={props.toggleModalCalendar} style={{ borderBottomWidth: 2, padding: 40 }}>
+						<AntDesign name="close" size={24} color="black" />
 					</Pressable>
 					<CalendarList
 						current={new Date().toISOString().split('T')[0]}
@@ -56,7 +57,6 @@ const CalendarMeals = (props: Props) => {
 								...acc,
 								[new Date(shift).toISOString().split('T')[0]]: {
 									marked: true,
-									color: 'green',
 									customStyles,
 								},
 							}),

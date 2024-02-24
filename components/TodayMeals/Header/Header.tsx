@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { deleteAllMeals, updateMealById } from '../../../utils/database';
 import { type Meal } from '../../../types/meal';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type Props = {
 	readonly updatedMeals: Meal[];
@@ -22,11 +23,11 @@ function Header(props: Props) {
 	};
 
 	return (
-		<View style={styles.container}>
+		<LinearGradient colors={['#F7971E', '#F0CB69']} style={styles.container}>
 			<Pressable onPress={props.toggleModalCalendar}>
 				<Feather name="calendar" size={24} color="black" />
 			</Pressable>
-			<Text>{new Date().toLocaleDateString()}</Text>
+			<Text style={{ fontWeight: 'bold' }}>{new Date().toLocaleDateString()}</Text>
 			{!props.isEditable ? (
 				<Pressable onPress={props.toggleEditable}>
 					<Feather name="edit" size={24} color="black" />
@@ -36,7 +37,7 @@ function Header(props: Props) {
 					<Feather name="save" size={24} color="black" />
 				</Pressable>
 			)}
-		</View>
+		</LinearGradient>
 	);
 }
 

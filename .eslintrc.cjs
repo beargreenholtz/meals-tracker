@@ -56,6 +56,7 @@ module.exports = {
 		'react-hooks/exhaustive-deps': 0,
 		'radix': 0,
 		'react/no-unstable-nested-components': 0,
+		'curly': 0,
 	},
 	extends: ['@react-native-community/eslint-config', 'plugin:@typescript-eslint/recommended'],
 };

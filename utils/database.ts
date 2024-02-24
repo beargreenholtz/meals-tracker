@@ -339,35 +339,3 @@ export function getCalendarDates(): Promise<string[]> {
 		});
 	});
 }
-
-export function resetDatabase() {
-	return new Promise<void>((resolve, reject) => {
-		database.transaction((tx) => {
-			tx.executeSql(
-				'DROP TABLE IF EXISTS meals_calendar',
-				[],
-				() => {
-					console.log("Table 'meals_calendar' dropped successfully.");
-					tx.executeSql(
-						'DROP TABLE IF EXISTS meals',
-						[],
-						() => {
-							console.log("Table 'meals' dropped successfully.");
-							init().then(resolve).catch(reject);
-						},
-						(_, error) => {
-							console.log(error);
-							reject(new Error(error.message));
-							return true;
-						},
-					);
-				},
-				(_, error) => {
-					console.log(error);
-					reject(new Error(error.message));
-					return true;
-				},
-			);
-		});
-	});
-}

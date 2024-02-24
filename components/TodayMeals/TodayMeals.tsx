@@ -4,39 +4,38 @@ import { Feather } from '@expo/vector-icons';
 import Checkbox from 'expo-checkbox';
 import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
 
 import { Meal } from '../../types/meal';
-import {
-	fetchCalendarByDate,
-	fetchMeals,
-	insertMeal,
-	insertMealsForToday,
-	removeLastMeal,
-	toggleMealCheckedStatus,
-	updateMealById,
-} from '../../utils/database';
+import { fetchCalendarByDate, fetchMeals, insertMeal, insertMealsForToday, removeLastMeal, toggleMealCheckedStatus } from '../../utils/database';
 import CalendarMeals from '../CalendarMeals/CalendarMeals';
+import StreakModal from '../ui/StreakModal';
 
 import Header from './Header/Header';
+
+import { MotiView } from 'moti';
+import Card from '../ui/Card';
 
 function TodayMeals() {
 	const [isEditable, setIsEditable] = useState(false);
 	const [isModalColanderVisible, setIsModalCalendarVisible] = useState(false);
-
+	const [isModalStreakVisible, setIsModalStreakVisible] = useState(false);
 	const toggleModalCalendar = () => setIsModalCalendarVisible((prev) => !prev);
 
+	const toggleModalStreak = () => setIsModalStreakVisible((prev) => !prev);
 	const toggleEditable = async () => setIsEditable((prev) => !prev);
 
 	const [meals, setMeals] = useState<Meal[]>([]);
 
 	const handleMealToggleCheckbox = async (index: number, mealId: string) => {
-		if (isEditable) {
-			return;
+		if (meals.filter((item) => Boolean(item.isChecked) === true).length === meals.length - 1 && meals[index].isChecked === false) {
+			setIsModalStreakVisible(true);
+			Vibration.vibrate();
 		}
 
-		const isChecked = meals[index].isChecked;
 		Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+		const isChecked = meals[index].isChecked;
 
 		setMeals((prev) => {
 			const updatedMeals = [...prev];
@@ -54,6 +53,7 @@ function TodayMeals() {
 				return updatedMeals;
 			});
 		}
+
 		setIsEditable(false);
 	};
 
@@ -92,13 +92,6 @@ function TodayMeals() {
 			});
 		});
 	};
-	const onPressSubmitEdit = async (id: string) => {
-		const mealIndex = meals.findIndex((meal) => meal.meal_id === id);
-
-		await updateMealById(id, meals[mealIndex]);
-
-		toggleEditable();
-	};
 
 	useEffect(() => {
 		const fetchTodayCalendar = async () => {
@@ -117,86 +110,108 @@ function TodayMeals() {
 	return (
 		<>
 			<Header toggleEditable={toggleEditable} toggleModalCalendar={toggleModalCalendar} isEditable={isEditable} updatedMeals={meals} />
+			<StreakModal isModalStreakVisible={isModalStreakVisible} toggleModalStreak={toggleModalStreak} />
 			<CalendarMeals isVisible={isModalColanderVisible} toggleModalCalendar={toggleModalCalendar} />
 			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
 				<SafeAreaView style={styles.container}>
 					<FlatList
 						style={{ paddingHorizontal: 12, paddingTop: 24 }}
 						data={meals}
-						ItemSeparatorComponent={() => <View style={{ borderWidth: 1, marginVertical: 8, borderColor: '#808080' }} />}
-						ListEmptyComponent={
-							<View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
-								<Feather name="plus-square" size={52} color="black" onPress={() => onPressAddMeal()} />
-							</View>
-						}
+						ItemSeparatorComponent={() => <View style={{ marginVertical: 4 }} />}
 						renderItem={({ item, index }) => {
 							return (
-								<Pressable onPress={() => handleMealToggleCheckbox(index, item.meal_id ? item.meal_id : item.id)}>
-									<View style={{ justifyContent: 'space-between', flexDirection: 'row' }}>
-										<TextInput
-											placeholder="Edit meal name"
-											value={item.name}
-											style={[styles.title, item.isChecked && { textDecorationLine: 'line-through' }]}
-											editable={isEditable}
-											onChangeText={(text: string) => onChangeTextMeal(text, 'name', item.id)}
-										/>
-										<Checkbox
-											style={{ padding: 12 }}
-											color={'#fea022'}
-											value={Boolean(item.isChecked)}
-											onValueChange={() => handleMealToggleCheckbox(index, item.meal_id ? item.meal_id : item.id)}
-										/>
-									</View>
-									<View style={styles.contentContainer}>
-										{isEditable && (
-											<Pressable
-												onPress={() => {
-													onPressSubmitEdit(item.meal_id ? item.meal_id : item.id);
-												}}
-											>
-												<Feather name="save" size={24} color="black" />
-											</Pressable>
-										)}
-										<View style={{ flexDirection: 'column' }}>
-											<TextInput
-												scrollEnabled={false}
-												multiline={true}
-												placeholder="Edit carbs"
-												value={item.carbs}
-												style={[{ color: item.isChecked ? '#808080' : '#000' }, styles.content]}
-												editable={isEditable}
-												onChangeText={(text: string) => onChangeTextMeal(text, 'carbs', item.id)}
-											/>
-											<TextInput
-												scrollEnabled={false}
-												multiline={true}
-												placeholder="Edit proteins"
-												value={item.protein}
-												style={[{ color: item.isChecked ? '#808080' : '#000' }, styles.content]}
-												editable={isEditable}
-												onChangeText={(text: string) => onChangeTextMeal(text, 'protein', item.id)}
-											/>
-											<TextInput
-												scrollEnabled={false}
-												placeholder="Edit fats"
-												value={item.fats}
-												style={[{ color: item.isChecked ? '#808080' : '#000' }, styles.content]}
-												editable={isEditable}
-												onChangeText={(text: string) => onChangeTextMeal(text, 'fats', item.id)}
-											/>
-										</View>
-									</View>
+								<>
+									{index === 0 && <Text style={{ fontSize: 16, fontWeight: 'bold', paddingBottom: 8 }}>Today meals</Text>}
+									<Card>
+										<Pressable onPress={() => handleMealToggleCheckbox(index, item.meal_id ? item.meal_id : item.id)}>
+											<View style={{ justifyContent: 'space-between', flexDirection: 'row' }}>
+												<TextInput
+													placeholder="Edit meal name"
+													value={item.name}
+													style={[styles.title, item.isChecked && !isEditable && { textDecorationLine: 'line-through' }]}
+													editable={isEditable}
+													onChangeText={(text: string) => onChangeTextMeal(text, 'name', item.id)}
+												/>
+												{!isEditable && (
+													<MotiView
+														animate={{
+															scale: !item.isChecked ? 1 : 1.2,
+														}}
+														transition={{
+															type: 'spring',
+														}}
+													>
+														<Checkbox
+															style={{ padding: 12 }}
+															color={'#fea022'}
+															value={Boolean(item.isChecked)}
+															onValueChange={() => handleMealToggleCheckbox(index, item.meal_id ? item.meal_id : item.id)}
+														/>
+													</MotiView>
+												)}
+											</View>
+											<View style={styles.contentContainer}>
+												<View style={{ flexDirection: 'column' }}>
+													<TextInput
+														scrollEnabled={false}
+														multiline={true}
+														placeholder="Edit carbs"
+														value={item.carbs}
+														style={[{ color: item.isChecked ? '#808080' : '#000' }, styles.content]}
+														editable={isEditable}
+														onChangeText={(text: string) => onChangeTextMeal(text, 'carbs', item.id)}
+													/>
+													<TextInput
+														scrollEnabled={false}
+														multiline={true}
+														placeholder="Edit proteins"
+														value={item.protein}
+														style={[{ color: item.isChecked ? '#808080' : '#000' }, styles.content]}
+														editable={isEditable}
+														onChangeText={(text: string) => onChangeTextMeal(text, 'protein', item.id)}
+													/>
+													<TextInput
+														scrollEnabled={false}
+														placeholder="Edit fats"
+														value={item.fats}
+														style={[{ color: item.isChecked ? '#808080' : '#000' }, styles.content]}
+														editable={isEditable}
+														onChangeText={(text: string) => onChangeTextMeal(text, 'fats', item.id)}
+													/>
+												</View>
+											</View>
+										</Pressable>
+									</Card>
 									{isEditable && index === meals.length - 1 && (
 										<View style={styles.editButtonsContainer}>
 											<Feather name="minus" size={24} color="black" onPress={onPressRemoveLastMeal} />
 											<Feather name="plus" size={24} color="black" onPress={() => onPressAddMeal()} />
 										</View>
 									)}
-								</Pressable>
+								</>
 							);
 						}}
 						keyExtractor={(item) => (item.id ? item.id.toString() : item.name)}
 					/>
+					{meals.length === 0 && (
+						<>
+							<View
+								style={{
+									position: 'absolute',
+									top: 0,
+									left: 0,
+									right: 0,
+									bottom: 0,
+									justifyContent: 'center',
+									alignItems: 'center',
+								}}
+							>
+								<Pressable onPress={() => onPressAddMeal()}>
+									<Feather name="plus-square" size={52} color="black" />
+								</Pressable>
+							</View>
+						</>
+					)}
 				</SafeAreaView>
 			</KeyboardAvoidingView>
 		</>
@@ -211,7 +226,7 @@ const styles = StyleSheet.create({
 	},
 	title: {
 		fontSize: 16,
-		color: '#808080',
+		color: '#000',
 	},
 	contentContainer: {
 		flexDirection: 'row',
