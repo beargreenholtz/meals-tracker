@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import * as Haptics from 'expo-haptics';
 import LottieView from 'lottie-react-native';
 import { MotiView } from 'moti';
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { getAllStreakDates } from '../../utils/database';
 import { currentStreak } from '../../utils/streak-counter';
 
 type Props = {
@@ -14,10 +15,28 @@ type Props = {
 
 function StreakModal(props: Props) {
 	const [modalVisible, setModalVisible] = useState(true);
-	const arr = ['2024-02-22', '2024-02-21', '2024-02-19', '2024-02-16', '2019-09-23'];
+	const [streakDate, setStreakDates] = useState<string[]>([]);
 
-	// const streak = currentStreak(arr) || 0;
-	const streak = 999;
+	useEffect(() => {
+		const fetchStreakDates = async () => {
+			try {
+				const streaks = await getAllStreakDates();
+
+				console.log(streaks);
+
+				const streaksDateOnly = streaks.map((date) => date.date);
+
+				console.log(currentStreak(streaksDateOnly));
+
+				setStreakDates(streaksDateOnly);
+			} catch {
+				console.log('No streak dates');
+			}
+		};
+		fetchStreakDates();
+	}, []);
+
+	const streak = (currentStreak(streakDate) ?? 0) - 1;
 
 	return (
 		<Modal
@@ -49,7 +68,7 @@ function StreakModal(props: Props) {
 						<LottieView
 							onAnimationFinish={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)}
 							autoPlay
-							loop={false}
+							loop={true}
 							style={{
 								width: 60,
 								height: 60,

@@ -4,33 +4,41 @@ import { Feather } from '@expo/vector-icons';
 import Checkbox from 'expo-checkbox';
 import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
+import { MotiView } from 'moti';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
 
 import { Meal } from '../../types/meal';
-import { fetchCalendarByDate, fetchMeals, insertMeal, insertMealsForToday, removeLastMeal, toggleMealCheckedStatus } from '../../utils/database';
+import {
+	fetchCalendarByDate,
+	fetchMeals,
+	insertMeal,
+	insertMealsForToday,
+	insertStreakDate,
+	removeLastMeal,
+	toggleMealCheckedStatus,
+} from '../../utils/database';
 import CalendarMeals from '../CalendarMeals/CalendarMeals';
+import Card from '../ui/Card';
 import StreakModal from '../ui/StreakModal';
 
 import Header from './Header/Header';
-
-import { MotiView } from 'moti';
-import Card from '../ui/Card';
 
 function TodayMeals() {
 	const [isEditable, setIsEditable] = useState(false);
 	const [isModalColanderVisible, setIsModalCalendarVisible] = useState(false);
 	const [isModalStreakVisible, setIsModalStreakVisible] = useState(false);
+	const [meals, setMeals] = useState<Meal[]>([]);
+
 	const toggleModalCalendar = () => setIsModalCalendarVisible((prev) => !prev);
 
 	const toggleModalStreak = () => setIsModalStreakVisible((prev) => !prev);
 	const toggleEditable = async () => setIsEditable((prev) => !prev);
 
-	const [meals, setMeals] = useState<Meal[]>([]);
-
 	const handleMealToggleCheckbox = async (index: number, mealId: string) => {
-		if (meals.filter((item) => Boolean(item.isChecked) === true).length === meals.length - 1 && meals[index].isChecked === false) {
+		if (meals.filter((item) => Boolean(item.isChecked) === true).length === meals.length - 1 && Boolean(meals[index].isChecked) === false) {
 			setIsModalStreakVisible(true);
 			Vibration.vibrate();
+			await insertStreakDate(new Date());
 		}
 
 		Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -53,8 +61,6 @@ function TodayMeals() {
 				return updatedMeals;
 			});
 		}
-
-		setIsEditable(false);
 	};
 
 	const onPressAddMeal = async () => {

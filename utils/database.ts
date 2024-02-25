@@ -2,51 +2,87 @@ import * as Crypto from 'expo-crypto';
 import * as SQLite from 'expo-sqlite';
 
 import { type Meal, MealsCalendarResponse } from '../types/meal';
+import { dbResponseStreak } from '../types/response';
 
 const database = SQLite.openDatabase('meals.db');
+
+function createMealsTable(tx: SQLite.SQLTransaction) {
+	return new Promise<void>((resolve, reject) => {
+		tx.executeSql(
+			`CREATE TABLE IF NOT EXISTS meals(
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                carbs TEXT NOT NULL,
+                protein TEXT NOT NULL,
+                fats TEXT NOT NULL
+            )`,
+			[],
+			() => {
+				console.log("Table 'meals' created successfully.");
+				resolve();
+			},
+			(_, error) => {
+				console.log(error);
+				reject(new Error(error.message));
+				return true;
+			},
+		);
+	});
+}
+
+function createStreakTable(tx: SQLite.SQLTransaction) {
+	return new Promise<void>((resolve, reject) => {
+		tx.executeSql(
+			`CREATE TABLE IF NOT EXISTS streak(
+                id INTEGER PRIMARY KEY,
+                date DATE NOT NULL
+            )`,
+			[],
+			() => {
+				console.log("Table 'streak' created successfully.");
+				resolve();
+			},
+			(_, error) => {
+				console.log(error);
+				reject(new Error(error.message));
+				return false;
+			},
+		);
+	});
+}
+
+function createMealsCalendarTable(tx: SQLite.SQLTransaction) {
+	return new Promise<void>((resolve, reject) => {
+		tx.executeSql(
+			`CREATE TABLE IF NOT EXISTS meals_calendar(
+                id TEXT PRIMARY KEY NOT NULL,
+                meal_id TEXT NOT NULL,
+                date DATE NOT NULL,
+                isChecked BIT NOT NULL DEFAULT 0,
+                FOREIGN KEY (meal_id) REFERENCES meals (id)
+            )`,
+			[],
+			() => {
+				console.log("Table 'meals_calendar' created successfully.");
+				resolve();
+			},
+			(_, error) => {
+				console.log(error);
+				reject(new Error(error.message));
+				return false;
+			},
+		);
+	});
+}
 
 export function init() {
 	return new Promise<void>((resolve, reject) => {
 		database.transaction((tx) => {
-			tx.executeSql(
-				`CREATE TABLE IF NOT EXISTS meals(
-                    id TEXT PRIMARY KEY NOT NULL,
-                    name TEXT NOT NULL,
-                    carbs TEXT NOT NULL,
-                    protein TEXT NOT NULL,
-                    fats TEXT NOT NULL
-				)`,
-				[],
-				() => {
-					console.log("Table 'meals' created successfully.");
-					tx.executeSql(
-						`CREATE TABLE IF NOT EXISTS meals_calendar(
-							id TEXT PRIMARY KEY NOT NULL,
-							meal_id TEXT NOT NULL,
-							date DATE NOT NULL,
-							isChecked BIT NOT NULL DEFAULT 0,
-							FOREIGN KEY (meal_id) REFERENCES meals (id)
-						)`,
-						[],
-						() => {
-							console.log("Table 'meals_calendar' created successfully.");
-							resolve();
-						},
-						(_, error) => {
-							console.log(error);
-							reject(new Error(error.message));
-
-							return true;
-						},
-					);
-				},
-				(_, error) => {
-					console.log(error);
-					reject(new Error(error.message));
-
-					return true;
-				},
-			);
+			createMealsTable(tx)
+				.then(() => createMealsCalendarTable(tx))
+				.then(() => createStreakTable(tx))
+				.then(resolve)
+				.catch(reject);
 		});
 	});
 }
@@ -84,7 +120,7 @@ export function insertMeal(meal: Meal) {
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -105,7 +141,7 @@ export function fetchMeals(): Promise<Meal[]> {
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -126,7 +162,7 @@ export function deleteAllMeals(): Promise<void> {
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -151,7 +187,7 @@ export function removeLastMeal(): Promise<void> {
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -180,7 +216,7 @@ export function updateMealById(mealId: string, updatedMeal: Meal) {
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -204,7 +240,7 @@ export function fetchMealsByDate(date: string): Promise<Meal[]> {
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -256,7 +292,7 @@ export function insertMealsForToday(meals: Meal[]): Promise<void> {
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -282,7 +318,7 @@ export function fetchCalendarByDate(date: Date): Promise<MealsCalendarResponse[]
 					if (typeof error === 'string') {
 						reject(new Error(error));
 					}
-					return true;
+					return false;
 				},
 			);
 		});
@@ -309,7 +345,7 @@ export function toggleMealCheckedStatus(mealId: string) {
 					console.log(error);
 					reject(new Error(error.message));
 
-					return true;
+					return false;
 				},
 			);
 		});
@@ -333,7 +369,62 @@ export function getCalendarDates(): Promise<string[]> {
 				(_, error) => {
 					console.log(error);
 					reject(new Error(error.message));
-					return true;
+					return false;
+				},
+			);
+		});
+	});
+}
+
+export function insertStreakDate(date: Date): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		database.transaction((tx) => {
+			tx.executeSql(
+				'SELECT * FROM streak WHERE date = ?',
+				[new Date(date).toISOString().split('T')[0]],
+				(_, result) => {
+					if (result.rows.length === 0) {
+						tx.executeSql(
+							'INSERT INTO streak (date) VALUES (?)',
+							[new Date(date).toISOString().split('T')[0]],
+							() => {
+								console.log('Streak inserted successfully.');
+								resolve();
+							},
+							(_, error) => {
+								console.log(error.message);
+								reject(new Error(error.message));
+								return false;
+							},
+						);
+					} else {
+						console.log('Streak with date already exists.');
+						resolve();
+					}
+				},
+				(_, error) => {
+					console.log(error.message);
+					reject(new Error(error.message));
+					return false;
+				},
+			);
+		});
+	});
+}
+
+export function getAllStreakDates(): Promise<dbResponseStreak[]> {
+	return new Promise<dbResponseStreak[]>((resolve, reject) => {
+		database.transaction((tx) => {
+			tx.executeSql(
+				'SELECT date FROM streak ORDER BY date DESC',
+				[],
+				(_, result) => {
+					resolve(result.rows._array);
+				},
+				(_, error) => {
+					console.log(error.message);
+					reject(new Error(error.message));
+					return false;
 				},
 			);
 		});

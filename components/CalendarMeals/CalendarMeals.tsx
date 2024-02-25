@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Dimensions, Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Modal, Pressable, SafeAreaView, StyleSheet, View } from 'react-native';
 import { CalendarList } from 'react-native-calendars';
 
 import { getCalendarDates } from '../../utils/database';
